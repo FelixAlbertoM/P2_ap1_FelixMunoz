@@ -1,5 +1,7 @@
+using Microsoft.EntityFrameworkCore;
 using P2_AP1_FelixMunoz.Components;
 using P2_AP1_FelixMunoz.DAL;
+using P2_AP1_FelixMunoz.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +12,9 @@ builder.Services.AddRazorComponents()
 var connectionString = builder.Configuration.GetConnectionString("SqlConStr");
 
 builder.Services.AddDbContextFactory<Contexto>(o => o.UseSqlite(connectionString));
+
+builder.Services.AddScoped<RegistroService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
