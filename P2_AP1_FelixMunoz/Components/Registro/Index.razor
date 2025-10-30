@@ -1,0 +1,85 @@
+﻿@page "/index"
+
+<PageTitle>Index de Registros</PageTitle>
+<div class="container">
+	<div class="card shadow-lg">
+		<div class="card-header d-flex justify-content-between align-items-center">
+			<h5><strong>Registros</strong></h5>
+			<a href="/Create" class="btn btn-primary">
+				<span class="bi bi-plus-square mt-3"></span> Crear
+			</a>
+		</div>
+
+		<div class="card-body">
+			<div class="row align-items-center g-2">
+
+				<div class="col-3 col-sm-6 col-md-2">
+					<label class="col-form-label"><strong>Desde</strong></label>
+					<input type="date" class="form-control" @bind="FechaDesde" />
+				</div>
+
+
+				<div class="col-4 col-sm-6 col-md-2">
+					<label class="col-form-label"><strong>Hasta</strong></label>
+					<input type="date" class="form-control" @bind="FechaHasta" />
+				</div>
+
+
+				<div class="col-2">
+					<label class="col-form-label"><strong>Filtrar Por</strong></label>
+					<InputSelect class="form-select ms-0" @bind-Value="Filtro">
+						<option value="" selected disabled>Seleccione una opci&oacute;n:</option>
+						<option value="IdEntrada">IdEntrada</option>
+					</InputSelect>
+				</div>
+
+				<div class="col-5">
+					<label class="col-form-label"><strong>B&uacute;squeda</strong></label>
+					<div class="input-group">
+						<input class="form-control" @bind="ValorFiltro" placeholder="Buscar" />
+						<button type="button" class="btn btn-outline-primary bi bi-search" @onclick="Buscar"></button>
+					</div>
+				</div>
+			</div>
+
+			<div class="table-responsive mt-3">
+				<table class="table table-hover text-center align-middle">
+					<thead class="table table-striped text-black">
+						<tr>
+							<th>ID</th>
+							<th>Fecha</th>
+							<th>Opciones</th>
+						</tr>
+					</thead>
+
+					<tbody>
+						<tr>
+							<td>ID</td>
+							<td>Fecha</td>
+							<td>
+								<a href="/Edit" class="btn btn-outline-dark">
+									<span class="bi bi-pencil"></span>
+								</a>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		<div class="card-footer">
+			<div class="row">
+				<label>...</label>
+			</div>
+		</div>
+	</div>
+</div>
+
+@code {
+	public string Filtro { get; set; }
+	public DateTime FechaDesde { get; set; }
+	public DateTime FechaHasta { get; set; }
+	public string ValorFiltro { get; set; }
+
+	public void Buscar() { }
+}
