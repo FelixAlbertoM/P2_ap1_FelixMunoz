@@ -1,17 +1,217 @@
 ﻿@page "/Registro/Create"
+@using Microsoft.EntityFrameworkCore
+@using P2_AP1_FelixMunoz.DAL
+@using P2_AP1_FelixMunoz.Models
+@using P2_AP1_FelixMunoz.Service
+@inject IDbContextFactory<Contexto> DbFactory
+@inject PedidosService pedidosService
+@inject NavigationManager navigationManager
+
 
 <PageTitle>Agregar Nuevo</PageTitle>
 
 <div class="container mt-4">
     <div class="card shadow-sm">
-        <div class="card-header bg-white text-center">
-            <h5 class="mb-0">Agregar nuevo </h5>
+        <div class="card-header bg-light text-center">
+            <h4 class="fw-bold mb-0">Registro de Pedido</h4>
         </div>
-        <div class="card-body">
-        </div>
+
+        <EditForm Model="pedido" OnValidSubmit="@Guardar">
+
+            <DataAnnotationsValidator />
+
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Fecha:</label>
+                    <InputDate class="form-control" @bind-Value="pedido.Fecha" />
+                    <ValidationMessage For="@(() => pedido.Fecha)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nombre del Cliente:</label>
+                    <InputText class="form-control" @bind-Value="pedido.NombreCliente" />
+                    <ValidationMessage For="@(() => pedido.NombreCliente)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Total:</label>
+                    <input class="form-control bg-light text-secondary" value="@TotalDisplay"  />
+                </div>
+
+                <div class="border border-primary rounded p-3" style="background-color: white;">
+                    <h5 class="fw-bold mb-3">Agregar Detalle</h5>
+
+                    <div class="row g-2 align-items-end mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label">Componente:</label>
+                            <InputSelect class="form-select" @bind-Value="DetalleSeleccionado.ComponenteId">
+                                <option value="0">Seleccione un componente</option>
+                                @foreach (var c in ListaComponentes)
+                                {
+                                    <option value="@c.ComponenteId">@c.Descripcion (Existencia: @c.Existencia)</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Cantidad:</label>
+                            <InputNumber class="form-control" @bind-Value="DetalleSeleccionado.Cantidad" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Precio:</label>
+                            <InputNumber class="form-control" @bind-Value="DetalleSeleccionado.Precio" />
+                        </div>
+
+                        <div class="col-md-1 d-grid">
+                            <button type="button" class="btn btn-success bi bi-plus-circle" @onclick="AgregarDetalle">Agregar</button>
+                        </div>
+                    </div>
+
+                    <table class="table table-bordered align-middle text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Componente</th>
+                                <th>Cantidad</th>
+                                <th>Precio</th>
+                                <th>Importe</th>
+                                <th>Accion</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var d in pedido.PedidosDetalle)
+                            {
+                                <tr>
+                                    <td>@ListaComponentes.FirstOrDefault(c => c.ComponenteId == d.ComponenteId)?.Descripcion</td>
+                                    <td>@d.Cantidad</td>
+                                    <td>@d.Precio.ToString("C2")</td>
+                                    <td>@( (d.Cantidad * d.Precio).ToString("C2") )</td>
+                                    <td>
+                                        <button type="button" class="btn btn-outline-danger btn-sm bi bi-trash"
+                                                @onclick="() => RemoverDetalle(d)">
+                                            Remover
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(MensajeError))
+                {
+                    <div class="alert alert-danger mt-3">@MensajeError</div>
+                }
+            </div>
+
+            <div class="card-footer text-center">
+                <a href="/Pedidos/Index" class="btn btn-secondary me-2">
+                    <span class="bi bi-arrow-left"></span> Volver
+                </a>
+
+                <button type="submit" class="btn btn-primary bi bi-save"> Guardar Pedido</button>
+            </div>
+        </EditForm>
     </div>
 </div>
 
 @code {
+    private Pedidos pedido = new Pedidos();
+    private PedidosDetalle DetalleSeleccionado = new();
+    private List<Componente> ListaComponentes = new();
+    private string MensajeError = string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        await using var contexto = await DbFactory.CreateDbContextAsync();
+        ListaComponentes = await contexto.Componentes.ToListAsync();
+        pedido.Fecha = DateTime.Now;
+    }
+    private string TotalDisplay
+    {
+        get
+        {
+            if (pedido == null) return 0.ToString("C2");
+            if (pedido.PedidosDetalle != null && pedido.PedidosDetalle.Any())
+            {
+                decimal suma = pedido.PedidosDetalle.Sum(d => d.Precio * d.Cantidad);
+                return suma.ToString("C2");
+            }
+            return 0.ToString("C2");
+        }
+    }
 
+    private void AgregarDetalle()
+    {
+        MensajeError = string.Empty;
+
+        if (DetalleSeleccionado.ComponenteId <= 0)
+        {
+            MensajeError = "Seleccione un componente válido.";
+            return;
+        }
+        if (DetalleSeleccionado.Cantidad <= 0)
+        {
+            MensajeError = "La cantidad debe ser mayor a 0.";
+            return;
+        }
+
+        var componente = ListaComponentes.FirstOrDefault(c => c.ComponenteId == DetalleSeleccionado.ComponenteId);
+        if (componente == null)
+        {
+            MensajeError = "Componente no encontrado.";
+            return;
+        }
+
+        if (DetalleSeleccionado.Cantidad > componente.Existencia)
+        {
+            MensajeError = "No hay existencia suficiente";
+            return;
+        }
+
+        if (pedido.PedidosDetalle == null) pedido.PedidosDetalle = new List<PedidosDetalle>();
+
+        pedido.PedidosDetalle.Add(new PedidosDetalle
+        {
+            ComponenteId = DetalleSeleccionado.ComponenteId,
+            Cantidad = DetalleSeleccionado.Cantidad,
+            Precio = DetalleSeleccionado.Precio == 0 ? componente.Precio : DetalleSeleccionado.Precio
+        });
+
+        DetalleSeleccionado = new PedidosDetalle();
+    }
+    private void RemoverDetalle(PedidosDetalle detalle)
+    {
+        pedido.PedidosDetalle.Remove(detalle);
+
+        DetalleSeleccionado = new PedidosDetalle
+        {
+            ComponenteId = detalle.ComponenteId,
+            Cantidad = detalle.Cantidad,
+            Precio = detalle.Precio
+        };
+    }
+
+    private async Task Guardar()
+    {
+        MensajeError = string.Empty;
+
+        if (pedido.PedidosDetalle == null || !pedido.PedidosDetalle.Any())
+        {
+            MensajeError = "Debe agregar al menos un detalle al pedido.";
+            return;
+        }
+        pedido.Total = pedido.PedidosDetalle.Sum(d => d.Precio * d.Cantidad);
+
+        var ok = await pedidosService.Guardar(pedido);
+
+        if (ok)
+        {
+            MensajeError = ("Pedido guardado correctamente");
+            navigationManager.NavigateTo("/Pedidos/Index");
+        }
+        else
+        {
+            MensajeError = "No se pudo guardar el pedido.";
+        }
+    }
 }

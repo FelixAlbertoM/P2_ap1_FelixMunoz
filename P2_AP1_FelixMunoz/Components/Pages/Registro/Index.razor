@@ -1,18 +1,18 @@
 ﻿@page "/Registro/index"
+@using P2_AP1_FelixMunoz.Models
+@using P2_AP1_FelixMunoz.Service
+@inject PedidosService pedidosService
+@rendermode InteractiveServer
 
 <PageTitle>Index de Registros</PageTitle>
-<div class="container">
-	<div class="card shadow-lg">
-		<div class="card-header d-flex justify-content-between align-items-center">
-			<h5><strong>Registros</strong></h5>
-			<a href="/Create" class="btn btn-primary">
-				<span class="bi bi-plus-square mt-3"></span> Crear
-			</a>
+<div class="container mt-4">
+	<div class="card shadow">
+		<div class="card-header text-center bg-white">
+			<h5 class="mb-0">Consulta de Pedidos</h5>
 		</div>
 
 		<div class="card-body">
-			<div class="row align-items-center g-2">
-
+            <div class="row align-items-end mb-3">
 				<div class="col-3 col-sm-6 col-md-2">
 					<label class="col-form-label"><strong>Desde</strong></label>
 					<input type="date" class="form-control" @bind="FechaDesde" />
@@ -40,46 +40,176 @@
 						<button type="button" class="btn btn-outline-primary bi bi-search" @onclick="Buscar"></button>
 					</div>
 				</div>
+				<div class="col-md-4 ms-auto text-end">
+					<a href="/Registro/Create" class="btn btn-success">
+						<i class="bi bi-plus-circle me-1"></i> Crear
+					</a>
+				</div>
+				
 			</div>
 
 			<div class="table-responsive mt-3">
 				<table class="table table-hover text-center align-middle">
 					<thead class="table table-striped text-black">
 						<tr>
-							<th>ID</th>
+							<th>PedidoId</th>
+							<th>Cliente</th>
 							<th>Fecha</th>
+							<th>Descripcion</th>
+							<th>Total</th>
+							<th>Editar</th>
+							<th>Eliminar</th>
+
+
 							<th>Opciones</th>
 						</tr>
 					</thead>
 
 					<tbody>
-						<tr>
-							<td>ID</td>
-							<td>Fecha</td>
-							<td>
-								<a href="/Edit" class="btn btn-outline-dark">
-									<span class="bi bi-pencil"></span>
-								</a>
-							</td>
-						</tr>
+						@foreach (var p in ListaPedidos)
+						{
+							<tr>
+								<td>@p.PedidoId</td>
+								<td>@p.NombreCliente</td>
+								<td>@p.Fecha.ToShortDateString()</td>
+								<th>Descripcion</th>
+								<td>@p.Total.ToString("C2")</td>
+								<td>
+									<button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#detalles@p.PedidoId">
+										Ver
+									</button>
+								</td>
+								<td>
+									<a href="/Pedidos/Edit/@p.PedidoId" class="btn btn-outline-success btn-sm">
+										<i class="bi bi-pencil"></i>
+									</a>
+								</td>
+								<td>
+									<button class="btn btn-outline-danger btn-sm" @onclick="() => MostrarModalEliminar(p)">
+										<i class="bi bi-trash"></i>
+									</button>
+								</td>
+							</tr>
+
+							<tr class="collapse" id="detalles@p.PedidoId">
+								<td colspan="7">
+									<table class="table table-sm">
+										<thead>
+											<tr>
+												<th>Componente</th>
+												<th>Cantidad</th>
+												<th>Precio</th>
+												<th>Importe</th>
+											</tr>
+										</thead>
+										<tbody>
+											@foreach (var d in p.PedidosDetalle)
+											{
+												<tr>
+													<td>@d.Componente?.Descripcion</td>
+													<td>@d.Cantidad</td>
+													<td>@d.Precio.ToString("C2")</td>
+													<td>@( (d.Precio * d.Cantidad).ToString("C2") )</td>
+												</tr>
+											}
+										</tbody>
+									</table>
+								</td>
+							</tr>
+						}
 					</tbody>
 				</table>
 			</div>
 		</div>
 
 		<div class="card-footer">
-			<div class="row">
-				<label>...</label>
+			<div class="d-flex justify-content-between mt-3">
+				<strong>Total Registros:</strong> @ListaPedidos.Count
+				<strong>Total General:</strong> @ListaPedidos.Sum(e => e.Total).ToString("C2")
 			</div>
 		</div>
 	</div>
 </div>
 
+@if (EsVisibleModalEliminar && PedidoSeleccionado != null)
+{
+	<div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.5);">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header bg-danger text-white">
+					<h5 class="modal-title">Confirmar Eliminación</h5>
+					<button type="button" class="btn-close" @onclick="() => EsVisibleModalEliminar = false"></button>
+				</div>
+				<div class="modal-body">
+					<p>¿Está seguro de eliminar este pedido?</p>
+					<ul>
+						<li><strong>ID:</strong> @PedidoSeleccionado.PedidoId</li>
+						<li><strong>Cliente:</strong> @PedidoSeleccionado.NombreCliente</li>
+						<li><strong>Total:</strong> @PedidoSeleccionado.Total.ToString("C2")</li>
+					</ul>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-secondary" @onclick="() => EsVisibleModalEliminar = false">Cancelar</button>
+					<button class="btn btn-danger" @onclick="EliminarPedido">Eliminar</button>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+
 @code {
+
+	private List<Pedidos> ListaPedidos { get; set; } = new();
+	private bool EsVisibleModalEliminar = false;
+	private Pedidos? PedidoSeleccionado;
+
+
+
 	public string Filtro { get; set; }
 	public DateTime FechaDesde { get; set; }
 	public DateTime FechaHasta { get; set; }
 	public string ValorFiltro { get; set; }
 
-	public void Buscar() { }
+	protected override async Task OnInitializedAsync()
+	{
+		ListaPedidos = await pedidosService.Listar(p => true);
+	}
+
+	private async Task Buscar()
+	{
+		var lista = await pedidosService.Listar(e => true);
+
+		if (!string.IsNullOrWhiteSpace(ValorFiltro))
+		{
+			if (Filtro == "PedidoId" && int.TryParse(ValorFiltro, out int id))
+				lista = lista.Where(e => e.PedidoId == id).ToList();
+			else if (Filtro == "Cliente")
+				lista = lista.Where(e => e.NombreCliente != null &&
+						  e.NombreCliente.Contains(ValorFiltro, StringComparison.OrdinalIgnoreCase)).ToList();
+		}
+
+		lista = lista
+			.Where(e => e.Fecha.Date >= FechaDesde.Date && e.Fecha.Date <= FechaHasta.Date)
+			.ToList();
+
+		ListaPedidos = lista;
+	}
+
+	private void MostrarModalEliminar(Pedidos p)
+	{
+		PedidoSeleccionado = p;
+		EsVisibleModalEliminar = true;
+	}
+
+	private async Task EliminarPedido()
+	{
+		if (PedidoSeleccionado != null && await pedidosService.Eliminar(PedidoSeleccionado.PedidoId))
+		{
+			EsVisibleModalEliminar = false;
+			ListaPedidos = await pedidosService.Listar(e => true);
+		}
+	}
 }
+
+

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 namespace P2_AP1_FelixMunoz.Models;
 
 public class Pedidos
@@ -13,4 +14,6 @@ public class Pedidos
 
     public decimal Total {  get; set; }
 
+    [ForeignKey("PedidoId")]
+    public virtual List<PedidosDetalle> PedidosDetalle { get; set; } = new List<PedidosDetalle>();
 }
